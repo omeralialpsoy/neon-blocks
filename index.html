@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Blocks</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 20px 12px;
+            background: #080b18;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+            color: #65f5ff;
+            letter-spacing: 3px;
+            text-shadow: 0 0 15px #00d9ff;
+        }
+
+        .subtitle {
+            margin-bottom: 20px;
+            color: #9ba9ca;
+            font-size: 14px;
+        }
+
+        .score-box {
+            display: flex;
+            justify-content: space-around;
+            max-width: 360px;
+            margin: 0 auto 18px;
+            padding: 14px;
+            background: #11182d;
+            border: 1px solid #26395d;
+            border-radius: 14px;
+        }
+
+        .score-box small {
+            display: block;
+            margin-bottom: 5px;
+            color: #9ba9ca;
+        }
+
+        #score,
+        #best {
+            font-size: 27px;
+            font-weight: bold;
+        }
+
+        #score {
+            color: #65f5ff;
+        }
+
+        #best {
+            color: #ff70d9;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(8, minmax(0, 1fr));
+            gap: 4px;
+            width: min(92vw, 390px);
+            margin: 0 auto;
+            padding: 7px;
+            background: #11182d;
+            border: 1px solid #26395d;
+            border-radius: 12px;
+            box-shadow: 0 0 25px #101e46;
+            touch-action: none;
+        }
+
+        .cell {
+            min-width: 0;
+            aspect-ratio: 1;
+            border-radius: 4px;
+            background: #202943;
+            border: 1px solid #2b3653;
+        }
+
+        .cell.filled {
+            background: var(--block-color);
+            border-color: var(--block-color);
+            box-shadow: inset 0 0 7px #ffffff55,
+                0 0 7px var(--block-color);
+        }
+
+        .cell.preview {
+            outline: 2px solid #57ff9a;
+            background: #1c694b;
+            box-shadow: 0 0 10px #57ff9a;
+        }
+
+        .cell.preview-invalid {
+            outline: 2px solid #ff4f70;
+            background: #76243b;
+            box-shadow: 0 0 8px #ff4f70;
+        }
+
+        h3 {
+            margin: 22px 0 12px;
+            color: #c5d2f3;
+            font-size: 15px;
+        }
+
+        #pieces {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            width: min(100%, 390px);
+            margin: 0 auto;
+        }
+
+        .piece {
+            display: flex;
+            flex: 1;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+            min-height: 95px;
+            padding: 8px;
+            background: #11182d;
+            border: 1px solid #293653;
+            border-radius: 12px;
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .piece:active {
+            cursor: grabbing;
+        }
+
+        .mini-grid {
+            display: grid;
+            gap: 3px;
+            pointer-events: none;
+        }
+
+        .mini-cell {
+            width: clamp(10px, 3.5vw, 16px);
+            aspect-ratio: 1;
+            border-radius: 3px;
+            background: #202943;
+        }
+
+        .mini-cell.on {
+            background: var(--block-color);
+            box-shadow: 0 0 5px var(--block-color);
+        }
+
+        #message {
+            min-height: 24px;
+            margin: 15px 0;
+            color: #65f5ff;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 12px 22px;
+            border: 0;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #00c8ff, #a34dff);
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .instructions {
+            max-width: 350px;
+            margin: 18px auto;
+            color: #9ba9ca;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 350px) {
+            #board {
+                gap: 2px;
+                padding: 4px;
+            }
+
+            #pieces {
+                gap: 6px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>NEON BLOCKS</h1>
+    <div class="subtitle">Zekanı kullan, rekorunu kır!</div>
+
+    <div class="score-box">
+        <div>
+            <small>PUANIN</small>
+            <div id="score">0</div>
+        </div>
+        <div>
+            <small>REKORUN</small>
+            <div id="best">0</div>
+        </div>
+    </div>
+
+    <div id="board"></div>
+
+    <h3>Bloku tut, istediğin yere sürükle!</h3>
+    <div id="pieces"></div>
+
+    <div id="message">Hadi başlayalım!</div>
+
+    <button id="restart">YENİ OYUN</button>
+
+    <div class="instructions">
+        Blokları tahtaya sürükleyip bırak.
+        Yeşil ön izleme uygun yerleşimi,
+        kırmızı ön izleme ise geçersiz yerleşimi gösterir.
+        Dolu satırları ve sütunları tamamlayarak puan kazan!
+    </div>
+
+    <script>
+        "use strict";
+
+        const SIZE = 8;
+
+        const COLORS = [
+            "#00e5ff",
+            "#b45cff",
+            "#ff4fd8",
+            "#57ff9a",
+            "#ffb84d"
+        ];
+
+        const SHAPES = [
+            [[0, 0]],
+            [[0, 0], [0, 1]],
+            [[0, 0], [1, 0]],
+            [[0, 0], [0, 1], [0, 2]],
+            [[0, 0], [1, 0], [2, 0]],
+            [[0, 0], [0, 1], [1, 0], [1, 1]],
+            [[0, 0], [1, 0], [2, 0], [2, 1]],
+            [[0, 0], [0, 1], [1, 1], [1, 2]],
+            [[0, 0], [0, 1], [0, 2], [1, 1]],
+            [[0, 0], [1, 0], [1, 1], [2, 1]],
+            [[0, 0], [0, 1], [0, 2], [0, 3]],
+            [[0, 0], [1, 0], [2, 0], [3, 0]],
+            [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]]
+        ];
+
+        let board = [];
+        let pieces = [];
+        let score = 0;
+        let best = 0;
+        let gameOver = false;
+
+        let dragging = false;
+        let dragIndex = -1;
+        let dragGhost = null;
+        let dragRow = -1;
+        let dragCol = -1;
+        let dragTargetFound = false;
+        let dragAnchorRow = 0;
+        let dragAnchorCol = 0;
+
+        try {
+            best = Number(localStorage.getItem("neonBlocksBest")) || 0;
+        } catch (e) {
+            best = 0;
+        }
+
+        document.getElementById("best").textContent = best;
+
+        function randomPiece() {
+            const shape = SHAPES[
+                Math.floor(Math.random() * SHAPES.length)
+            ];
+
+            const color = COLORS[
+                Math.floor(Math.random() * COLORS.length)
+            ];
+
+            return {
+                shape: shape.map(cell => [...cell]),
+                color: color
+            };
+        }
+
+        function newGame() {
+            cancelDrag();
+
+            board = Array.from(
+                { length: SIZE },
+                () => Array(SIZE).fill(null)
+            );
+
+            score = 0;
+            gameOver = false;
+
+            pieces = [
+                randomPiece(),
+                randomPiece(),
+                randomPiece()
+            ];
+
+            updateScore();
+
+            document.getElementById("message").textContent =
+                "Bloklardan birini tut ve tahtaya sürükle!";
+
+            render();
+        }
+
+        function updateScore() {
+            document.getElementById("score").textContent = score;
+            document.getElementById("best").textContent = best;
+        }
+
+        function render() {
+            const boardElement = document.getElementById("board");
+            boardElement.innerHTML = "";
+
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const cell = document.createElement("div");
+                    cell.className = "cell";
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+
+                    if (board[r][c] !== null) {
+                        cell.classList.add("filled");
+                        cell.style.setProperty(
+                            "--block-color",
+                            board[r][c]
+                        );
+                    }
+
+                    boardElement.appendChild(cell);
+                }
+            }
+
+            const piecesElement = document.getElementById("pieces");
+            piecesElement.innerHTML = "";
+
+            pieces.forEach((piece, index) => {
+                const container = document.createElement("div");
+                container.className = "piece";
+
+                if (piece === null) {
+                    container.textContent = "✓";
+                    container.style.color = "#57ff9a";
+                    container.style.fontSize = "25px";
+                } else {
+                    const maxRow = Math.max(
+                        ...piece.shape.map(p => p[0])
+                    );
+
+                    const maxCol = Math.max(
+                        ...piece.shape.map(p => p[1])
+                    );
+
+                    const mini = document.createElement("div");
+                    mini.className = "mini-grid";
+                    mini.style.gridTemplateColumns =
+                        `repeat(${maxCol + 1}, auto)`;
+
+                    for (let r = 0; r <= maxRow; r++) {
+                        for (let c = 0; c <= maxCol; c++) {
+                            const square = document.createElement("div");
+                            square.className = "mini-cell";
+
+                            if (piece.shape.some(
+                                p => p[0] === r && p[1] === c
+                            )) {
+                                square.classList.add("on");
+                                square.style.setProperty(
+                                    "--block-color",
+                                    piece.color
+                                );
+                            }
+
+                            mini.appendChild(square);
+                        }
+                    }
+
+                    container.appendChild(mini);
+
+                    container.addEventListener(
+                        "pointerdown",
+                        event => startDrag(event, index)
+                    );
+                }
+
+                piecesElement.appendChild(container);
+            });
+        }
+
+        function canPlace(piece, row, col) {
+            return piece.shape.every(([dr, dc]) => {
+                const r = row + dr;
+                const c = col + dc;
+
+                return r >= 0 &&
+                    r < SIZE &&
+                    c >= 0 &&
+                    c < SIZE &&
+                    board[r][c] === null;
+            });
+        }
+
+        function placePiece(row, col, index) {
+            if (gameOver) return;
+
+            const piece = pieces[index];
+            if (!piece) return;
+
+            if (!canPlace(piece, row, col)) {
+                document.getElementById("message").textContent =
+                    "Buraya sığmıyor! Yeşil ön izleme olan yeri dene.";
+                return;
+            }
+
+            piece.shape.forEach(([dr, dc]) => {
+                board[row + dr][col + dc] = piece.color;
+            });
+
+            score += piece.shape.length;
+            pieces[index] = null;
+
+            clearLines();
+
+            if (score > best) {
+                best = score;
+
+                try {
+                    localStorage.setItem("neonBlocksBest", best);
+                } catch (e) { }
+            }
+
+            if (pieces.every(piece => piece === null)) {
+                pieces = [
+                    randomPiece(),
+                    randomPiece(),
+                    randomPiece()
+                ];
+            }
+
+            updateScore();
+
+            if (!hasAnyMove()) {
+                gameOver = true;
+                document.getElementById("message").textContent =
+                    "Oyun bitti! Puanın: " + score;
+            } else {
+                document.getElementById("message").textContent =
+                    "Güzel hamle! Devam et!";
+            }
+
+            render();
+        }
+
+        function clearLines() {
+            const fullRows = [];
+            const fullCols = [];
+
+            for (let r = 0; r < SIZE; r++) {
+                if (board[r].every(cell => cell !== null)) {
+                    fullRows.push(r);
+                }
+            }
+
+            for (let c = 0; c < SIZE; c++) {
+                if (board.every(row => row[c] !== null)) {
+                    fullCols.push(c);
+                }
+            }
+
+            for (const r of fullRows) {
+                for (let c = 0; c < SIZE; c++) {
+                    board[r][c] = null;
+                }
+            }
+
+            for (const c of fullCols) {
+                for (let r = 0; r < SIZE; r++) {
+                    board[r][c] = null;
+                }
+            }
+
+            const cleared = fullRows.length + fullCols.length;
+
+            if (cleared > 0) {
+                score += cleared * 10;
+
+                document.getElementById("message").textContent =
+                    cleared + " satır/sütun temizlendi! +" +
+                    cleared * 10 + " puan!";
+            }
+        }
+
+        function hasAnyMove() {
+            for (const piece of pieces) {
+                if (!piece) continue;
+
+                for (let r = 0; r < SIZE; r++) {
+                    for (let c = 0; c < SIZE; c++) {
+                        if (canPlace(piece, r, c)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        // Sürükleme başlatılır.
+        function startDrag(event, index) {
+            if (gameOver || !pieces[index] || dragging) return;
+
+            event.preventDefault();
+
+            dragging = true;
+            dragIndex = index;
+            dragTargetFound = false;
+
+            const piece = pieces[index];
+
+            const maxRow = Math.max(...piece.shape.map(p => p[0]));
+            const maxCol = Math.max(...piece.shape.map(p => p[1]));
+
+            // Parmağın altındaki kare, bloğun yaklaşık merkezi olur.
+            dragAnchorRow = Math.floor(maxRow / 2);
+            dragAnchorCol = Math.floor(maxCol / 2);
+
+            dragGhost = event.currentTarget.cloneNode(true);
+
+            dragGhost.style.position = "fixed";
+            dragGhost.style.left = "0";
+            dragGhost.style.top = "0";
+            dragGhost.style.zIndex = "9999";
+            dragGhost.style.width =
+                event.currentTarget.getBoundingClientRect().width + "px";
+            dragGhost.style.height =
+                event.currentTarget.getBoundingClientRect().height + "px";
+            dragGhost.style.opacity = "0.9";
+            dragGhost.style.pointerEvents = "none";
+            dragGhost.style.transform = "translate(-50%, -50%)";
+            dragGhost.style.margin = "0";
+            dragGhost.style.borderColor = "#65f5ff";
+            dragGhost.style.boxShadow = "0 0 20px #00d9ff";
+
+            document.body.appendChild(dragGhost);
+
+            moveGhost(event);
+
+            document.getElementById("message").textContent =
+                "Bloğu sürükle; yeşil ön izlemeyi takip et!";
+        }
+
+        // Sürükleme sırasında en yakın kare bulunur.
+        // Böylece hücreler arasındaki boşluklara bıraksan bile hedef seçilebilir.
+        function moveGhost(event) {
+            if (!dragging || !dragGhost) return;
+
+            dragGhost.style.left = event.clientX + "px";
+            dragGhost.style.top = event.clientY + "px";
+
+            const boardElement = document.getElementById("board");
+            const rect = boardElement.getBoundingClientRect();
+
+            clearPreview();
+
+            dragTargetFound =
+                event.clientX >= rect.left &&
+                event.clientX <= rect.right &&
+                event.clientY >= rect.top &&
+                event.clientY <= rect.bottom;
+
+            if (!dragTargetFound) {
+                dragRow = -1;
+                dragCol = -1;
+                return;
+            }
+
+            const cells = document.querySelectorAll("#board .cell");
+
+            let nearestCell = null;
+            let nearestDistance = Infinity;
+
+            cells.forEach(cell => {
+                const cellRect = cell.getBoundingClientRect();
+
+                const centerX = cellRect.left + cellRect.width / 2;
+                const centerY = cellRect.top + cellRect.height / 2;
+
+                const dx = event.clientX - centerX;
+                const dy = event.clientY - centerY;
+                const distance = dx * dx + dy * dy;
+
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearestCell = cell;
+                }
+            });
+
+            if (!nearestCell) {
+                dragTargetFound = false;
+                dragRow = -1;
+                dragCol = -1;
+                return;
+            }
+
+            const hoveredRow = Number(nearestCell.dataset.row);
+            const hoveredCol = Number(nearestCell.dataset.col);
+
+            dragRow = hoveredRow - dragAnchorRow;
+            dragCol = hoveredCol - dragAnchorCol;
+
+            const piece = pieces[dragIndex];
+            const valid = canPlace(piece, dragRow, dragCol);
+
+            piece.shape.forEach(([dr, dc]) => {
+                const r = dragRow + dr;
+                const c = dragCol + dc;
+
+                if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) {
+                    return;
+                }
+
+                const previewCell = document.querySelector(
+                    `#board .cell[data-row="${r}"][data-col="${c}"]`
+                );
+
+                if (previewCell) {
+                    previewCell.classList.add(
+                        valid ? "preview" : "preview-invalid"
+                    );
+                }
+            });
+        }
+
+        function clearPreview() {
+            document.querySelectorAll(
+                "#board .cell.preview, #board .cell.preview-invalid"
+            ).forEach(cell => {
+                cell.classList.remove("preview", "preview-invalid");
+            });
+        }
+
+        // Bırakma konumu son kez hesaplanır.
+        function finishDrag(event) {
+            if (!dragging) return;
+
+            moveGhost(event);
+
+            const row = dragRow;
+            const col = dragCol;
+            const index = dragIndex;
+            const found = dragTargetFound;
+
+            cancelDrag();
+            clearPreview();
+
+            if (found) {
+                placePiece(row, col, index);
+            } else {
+                document.getElementById("message").textContent =
+                    "Bloğu oyun tahtasının üzerine bırak!";
+            }
+        }
+
+        function cancelDrag() {
+            if (dragGhost) {
+                dragGhost.remove();
+            }
+
+            dragGhost = null;
+            dragging = false;
+            dragIndex = -1;
+            dragRow = -1;
+            dragCol = -1;
+            dragTargetFound = false;
+        }
+
+        document.addEventListener("pointermove", moveGhost);
+        document.addEventListener("pointerup", finishDrag);
+
+        document.addEventListener("pointercancel", () => {
+            if (dragging) {
+                cancelDrag();
+                clearPreview();
+            }
+        });
+
+        document.getElementById("restart").addEventListener(
+            "click",
+            newGame
+        );
+
+        newGame();
+    </script>
+
+</body>
+
+</html>
